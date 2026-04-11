@@ -2,7 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <ctime>
-import ArboreBinar;
+#include "ArboreBinar.hpp"
 
 /// <summary>
 /// 
@@ -144,6 +144,6 @@ int main() {
 	std::vector<int> v = genereazaSecventa(10, 0, 20);
 	printeazaVector(v, "Secventa generata");
 
-	ArboreBinar<int> arbore;
+	ArboreBinar<int>* arbore = new ArboreBinar<int>();
 	return 0;
 }
