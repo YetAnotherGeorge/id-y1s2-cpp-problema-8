@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <ctime>
+import ArboreBinar;
 
 /// <summary>
 /// 
@@ -138,11 +139,11 @@ std::vector<int> genereazaSecventa(int nrElem, int min, int max) {
 	return arr;
 }
 
-int main()
-{
+int main() {
 	std::srand(43); // seed rand function
-	auto v = genereazaSecventa(10, 0, 20);
+	std::vector<int> v = genereazaSecventa(10, 0, 20);
 	printeazaVector(v, "Secventa generata");
 
+	ArboreBinar<int> arbore;
 	return 0;
 }

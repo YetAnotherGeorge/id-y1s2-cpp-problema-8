@@ -128,6 +128,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ArboreBinar.ixx" />
+    <ClCompile Include="ArboreBinar_Arbore.ixx" />
+    <ClCompile Include="ArboreBinar_Nod.ixx" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
