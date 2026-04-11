@@ -1,6 +1,6 @@
 #pragma once
-#include "Nod.hpp"
 #include <iostream>
+#include "Nod.hpp"
 
 /// <summary>
 /// Arbore binar. Poate fi complet gol
@@ -60,7 +60,7 @@ public:
    /// </returns>
    Nod<TVN>* insertBST(TVN val) {
       if (radacina_ == nullptr) {
-         std::cout << "insertBST: Arbore gol, inserare ca radacina" << std::endl;
+         // std::cout << "insertBST: Arbore gol, inserare ca radacina" << std::endl;
          Nod<TVN>* nod = new Nod<TVN>(val, 1, true, nullptr, nullptr, nullptr); // nod negru, contor 1
          this->radacina_ = nod;
          return this->radacina_;
@@ -73,11 +73,14 @@ public:
    /// <summary>
    /// Afiseaza arborele incepand de la radacina
    /// </summary>
-   void AfiseazaRecursiv() const {
+   /// <param name="valMaxStrLen">Lungimea maxima a valorii printata ca string</param>
+   void AfiseazaRecursiv(int valMaxStrLen) const {
       if (radacina_ != nullptr) {
-         radacina_->AfiseazaRecursiv();
+         std::cout << ">>>>>>>> ARBORE: \n";
+          radacina_->AfiseazaRecursiv(valMaxStrLen);
+         std::cout << "<<<<<<<<" << std::endl;
       } else {
-         std::cout << "Arbore gol!" << std::endl;
+         std::cout << "ARBORE GOL" << std::endl;
       }
    }
 };

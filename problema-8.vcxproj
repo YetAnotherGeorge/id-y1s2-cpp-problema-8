@@ -135,6 +135,7 @@
   <ItemGroup>
     <ClInclude Include="ArboreBinar.hpp" />
     <ClInclude Include="Nod.hpp" />
+    <ClInclude Include="VectorUtils.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
