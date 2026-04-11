@@ -10,13 +10,12 @@ int main() {
 	//std::vector<int> v = genereazaSecventa(10, 0, 20);
 	//printeazaVector(v, "Secventa generata");
 
-	std::vector<int> v = { 100, 50, 175, 25, 75, 150, 200 };
+	std::vector<int> v = { 100, 50, 175, 25, 150, 200 };
 	ArboreBinar<int>* arbore = new ArboreBinar<int>();
 	for (int i = 0; i < v.size(); i++) {
 		arbore->insertBST(v[i]);
 	}
 
-	Nod<int>* root = arbore->getRadacina();
-	arbore->getRadacina()->walkBFS().Print(std::cout, true);
+	arbore->AfiseazaRecursiv(3);
 	return 0;
 }

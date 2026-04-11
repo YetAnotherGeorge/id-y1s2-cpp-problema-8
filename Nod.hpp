@@ -6,6 +6,8 @@
 #include <vector>
 #include <queue>
 #include <stack>
+#include <stdexcept>
+#include <cmath>
 
 // Note generale: 
 //  - Google C++ style for private members: name_ (with trailing underscore)
@@ -181,6 +183,56 @@ public:
 	}
 
 	/// <summary>
+	/// Node must not connect to any CYCLE otherwise this method will not stop
+	/// </summary>
+	/// <returns>
+	/// <br/> Returns a matrix of the form: 
+	/// <br/>   [0], 
+	/// <br/>   [_,2],
+	/// <br/>   [_,_,5,6], // _ = null
+	/// <br/>   ...
+	/// <br/> Entries can be null if the tree is not complete
+	/// </returns>
+	std::vector<std::vector<Nod<TVN>*>> getBinTreeLayers() {
+		std::vector<std::vector<Nod<TVN>*>> layers;
+
+		int layer_idx = 0;
+		std::vector<Nod<TVN>*> layer_current = { this };
+
+		bool continue_walk = true;
+		while (continue_walk) {
+			size_t layer_sz = size_t(1) << layer_idx; // 2**(layer_idx + 1) = numarul de noduri posibile in layer-ul curent
+			if (layer_current.size() != layer_sz) {
+				std::cerr << "Warning: walkBFSAsLayers - layer " << layer_idx << " has " << layer_current.size() << " nodes, but expected " << layer_sz << " => INVALID" << std::endl;
+				throw std::runtime_error("walkBFSAsLayers - invalid layer size");
+			}
+
+			continue_walk = false;
+			std::vector<Nod<TVN>*> layer_next(layer_sz * 2, nullptr); // pregateste layer-ul urmator (initial gol)
+			for (size_t i = 0; i < layer_current.size(); i++) {
+				Nod<TVN>* n = layer_current[i];
+				if (n != nullptr) {
+					if (n->c_stanga_ != nullptr) {
+						continue_walk = true;
+						layer_next[i * 2] = n->c_stanga_; // copil stanga
+					}
+					if (n->c_dreapta_ != nullptr) {
+						continue_walk = true;
+						layer_next[i * 2 + 1] = n->c_dreapta_; // copil dreapta
+					}
+				}
+			}
+
+			layers.push_back(layer_current); // adauga layer-ul curent in rezultat
+			layer_idx++;
+
+			layer_current = layer_next; // trece la layer-ul urmator
+		}
+
+		return layers;
+	}
+
+	/// <summary>
 	/// Insereaza valoarea respectand proprietatile unui arbore binar de cautare. Daca valoarea exista deja, incrementeaza contorul nodului existent.
 	/// </summary>
 	/// <param name="val"></param>
@@ -237,7 +289,7 @@ public:
 
 #pragma region AFISARE_STRING
 	/// <summary>
-	/// Afiseaza arborele incepand de la nodul curent, similar cu comanda tree din Linux
+	/// Afiseaza arborele binar incepand de la nodul curent, similar cu comanda tree din Linux
 	/// </summary>
 	/// <param name="valMaxStrLen">The maximum length of the value</param>
 	void AfiseazaRecursiv(int valMaxStrLen) {
@@ -245,7 +297,79 @@ public:
 		constexpr const char* kColorRosu = "\033[91m"; // ANSI bright red
 		constexpr const char* kColorReset = "\033[0m";  // ANSI reset (culoare implicita, pentru noduri negre)
 
-		TreeWalkInfo<TVN> wBFS = this->walkBFS();
+		std::vector<std::vector<Nod<TVN>*>> layers = this->getBinTreeLayers();
+		const int space_min = 2; // spatiul minim intre noduri
+		std::string space_min_pad(space_min, ' '); // padding pentru spatiul minim
+
+		int lr_elem = 1 << (layers.size() - 1); // last row elements count
+
+		// last row width in chars; all items must be uniformly distributed in this width
+		int lr_sz = lr_elem * valMaxStrLen + (lr_elem - 1) * space_min; 
+
+		int ch_count_header_half = std::max(abs(lr_sz / 2), 10);
+		std::cout << std::string(ch_count_header_half - 4, '<') << " ARBORE " << std::string(ch_count_header_half - 4, '<') << "\n";
+		// print each row 
+		for (int i = 0; i < layers.size(); i++) {
+			std::vector<Nod<TVN>*> r = layers[i]; // row
+			int r_sz = r.size() * valMaxStrLen + (r.size() - 1) * space_min; // current row width in chars
+			int r_extra_pad = (lr_sz - r_sz) / (r.size() + 1); 
+			std::string r_extra_pad_str(r_extra_pad, ' '); // extra padding to distribute in row
+
+			// Print values row
+			for (int j = 0; j < r.size(); j++) {
+				// get string representation of node value, or empty string if null
+				std::string n_str;
+				Nod<TVN>* n = r[j];
+				if (n == nullptr) {
+					n_str = std::string(valMaxStrLen, ' ');
+				} else {
+					n_str = std::to_string(n->getValoare());
+					if (n_str.size() < valMaxStrLen) {
+						// pad left with spaces to reach valMaxStrLen
+						n_str = std::string(valMaxStrLen - n_str.size(), ' ') + n_str;
+					}
+				}
+
+				// print node with color and padding
+				std::cout << r_extra_pad_str;
+				if (n != nullptr && n->negru_) {
+					std::cout << n_str;
+				} else {
+					std::cout << kColorRosu << n_str << kColorReset;
+				}
+				std::cout << space_min_pad;
+			}
+			std::cout << "\n";
+
+			// Print / \ connections row:
+			// - each / must start under the space before the first char
+			// - each \ must start under the last char
+			if (i < layers.size() - 1) {
+				std::vector<Nod<TVN>*> r = layers[i]; // row
+				std::vector<Nod<TVN>*> r_next = layers[i + 1]; // next row
+				
+				int c_extra_pad = r.size() % 2 == 0 ? r_extra_pad : r_extra_pad - 1;
+				std::string c_extra_pad_str(c_extra_pad, ' '); 
+
+				for (int j = 0; j < r.size(); j++) {
+					//std::cout << c_extra_pad 
+					Nod<TVN>* n = r[j];
+					std::cout << c_extra_pad_str;
+
+					if (n == nullptr) {
+						std::cout << std::string(valMaxStrLen + 2, ' ');
+					} else {
+						char ch_stanga = n->c_stanga_ != nullptr ? '/' : ' ';
+						char ch_dreapta = n->c_dreapta_ != nullptr ? '\\' : ' ';
+						std::cout << ch_stanga << std::string(valMaxStrLen, ' ') << ch_dreapta;
+					}
+				}
+
+				std::cout << "\n";
+			}
+		}
+
+		std::cout << std::string(ch_count_header_half * 2, '>') << std::endl;
 	}
 #pragma endregion
 };
