@@ -8,6 +8,8 @@
 #include <stack>
 #include <stdexcept>
 #include <cmath>
+#include <numbers>
+#include <optional>
 
 // Note generale: 
 //  - Google C++ style for private members: name_ (with trailing underscore)
@@ -24,14 +26,14 @@ template <typename TVN> struct TreeWalkInfo {
 	/// </summary>
 	/// <param name="out"></param>
 	void Print(std::ostream& out, bool brief = false) const {
-		out << "Walk [treeLayers: " << treeDepth+1 << "]: ";
+		out << "Walk [treeLayers: " << treeDepth + 1 << "]: ";
 		for (size_t i = 0; i < walkNodes.size(); i++) {
 			const Nod<TVN>* node = std::get<0>(walkNodes[i]);
 			int nodeDepth = std::get<1>(walkNodes[i]);
 
-			if (!brief) 
+			if (!brief)
 				out << "{" << nodeDepth << ", '" << node->getValoare() << "'}";
-			else 
+			else
 				out << "'" << node->getValoare() << "'";
 
 			if (i < walkNodes.size() - 1) {
@@ -285,6 +287,21 @@ public:
 	Nod<TVN>* getCDreapta() const {
 		return c_dreapta_;
 	}
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <returns>nr. copii: 0, 1, 2</returns>
+	int getChildCount() const {
+		int count = 0;
+		if (c_stanga_ != nullptr) {
+			count++;
+		}
+		if (c_dreapta_ != nullptr) {
+			count++;
+		}
+		return count;
+	}
 #pragma endregion
 
 #pragma region AFISARE_STRING
@@ -292,84 +309,273 @@ public:
 	/// Afiseaza arborele binar incepand de la nodul curent, similar cu comanda tree din Linux
 	/// </summary>
 	/// <param name="valMaxStrLen">The maximum length of the value</param>
-	void AfiseazaRecursiv(int valMaxStrLen) {
-		// Pentru culoarea nod-ului
-		constexpr const char* kColorRosu = "\033[91m"; // ANSI bright red
-		constexpr const char* kColorReset = "\033[0m";  // ANSI reset (culoare implicita, pentru noduri negre)
-
+	void AfiseazaRecursiv() {
+		// obtine randuri de noduri
 		std::vector<std::vector<Nod<TVN>*>> layers = this->getBinTreeLayers();
-		const int space_min = 2; // spatiul minim intre noduri
-		std::string space_min_pad(space_min, ' '); // padding pentru spatiul minim
+
+#pragma region Print Config
+		constexpr const char* kColorRosu = "\033[91m"; // ANSI bright red
+		constexpr const char* kColorReset = "\033[0m"; // ANSI reset (culoare implicita, pentru noduri negre)
+
+		const int pr_space_min = 2; // print space min (intre nod-uri)
+		const int pr_val_sz = 3; // print value size (in chars)
 
 		int lr_elem = 1 << (layers.size() - 1); // last row elements count
+		int lr_sz = lr_elem * pr_val_sz + (lr_elem - 1) * pr_space_min; // last row width in chars
 
-		// last row width in chars; all items must be uniformly distributed in this width
-		int lr_sz = lr_elem * valMaxStrLen + (lr_elem - 1) * space_min; 
-
-		int ch_count_header_half = std::max(abs(lr_sz / 2), 10);
-		std::cout << std::string(ch_count_header_half - 4, '<') << " ARBORE " << std::string(ch_count_header_half - 4, '<') << "\n";
-		// print each row 
-		for (int i = 0; i < layers.size(); i++) {
-			std::vector<Nod<TVN>*> r = layers[i]; // row
-			int r_sz = r.size() * valMaxStrLen + (r.size() - 1) * space_min; // current row width in chars
-			int r_extra_pad = (lr_sz - r_sz) / (r.size() + 1); 
-			std::string r_extra_pad_str(r_extra_pad, ' '); // extra padding to distribute in row
-
-			// Print values row
-			for (int j = 0; j < r.size(); j++) {
-				// get string representation of node value, or empty string if null
-				std::string n_str;
-				Nod<TVN>* n = r[j];
-				if (n == nullptr) {
-					n_str = std::string(valMaxStrLen, ' ');
-				} else {
-					n_str = std::to_string(n->getValoare());
-					if (n_str.size() < valMaxStrLen) {
-						// pad left with spaces to reach valMaxStrLen
-						n_str = std::string(valMaxStrLen - n_str.size(), ' ') + n_str;
-					}
-				}
-
-				// print node with color and padding
-				std::cout << r_extra_pad_str;
-				if (n != nullptr && n->negru_) {
-					std::cout << n_str;
-				} else {
-					std::cout << kColorRosu << n_str << kColorReset;
-				}
-				std::cout << space_min_pad;
+#pragma endregion
+		// <METHOD> constrain string representation of value to pr_val_sz chars
+		auto pr_val_constrained = [&pr_val_sz](TVN value) {
+			std::string val_str = std::to_string(value);
+			if (val_str.size() > pr_val_sz) {
+				return val_str.substr(0, pr_val_sz - 2) + "..";
+			} else if (val_str.size() < pr_val_sz) {
+				return std::string(pr_val_sz - val_str.size(), '0') + val_str;
+			} else {
+				return val_str;
 			}
-			std::cout << "\n";
+		};
+		// <METHOD> print char matrix (without color insertion)
+		auto pr_char_matrix = [](const std::vector<std::vector<char>>& char_matrix) {
+			for (const std::vector<char>& line : char_matrix) {
+				for (char c : line) {
+					std::cout << c;
+				}
+				std::cout << std::endl;
+			}
+		};
+		// <METHOD> print to row; returns center of printed string
+		// row = row to print to
+		// str = string to print
+		// @returns: the index of the center of the printed string in the row
+		auto pr_to_row = [](std::vector<char>& row, const std::string& str) {
+			size_t ch_center = row.size() + str.length() / 2;
+			for (int i = 0; i < str.length(); i++) {
+				row.push_back(str[i]);
+			}
+			return ch_center;
+		};
+		// <METHOD> print to row in insert only mode; nothing is added to the vector, only overridden
+		// row = row to print to
+		// str = string to print
+		// center = the index to print the center of the string to; if the string has even length, it will be printed with 1 char more on the left side of the center
+		// @returns: the index of the center of the printed string in the row (should be equal to the center parameter)
+		auto pr_to_row_override = [](std::vector<char>& row, const std::string& str, size_t center) {
+			size_t idx_start = center - str.length() / 2, idx_end = center + str.length() / 2 - (str.length() % 2 == 0 ? 1 : 0);
+			if (idx_start < 0 || idx_end >= row.size()) {
+				std::cerr << "Error: pr_to_row_override - string '" << str << "' with center " << center << " does not fit in row of size " << row.size() << std::endl;
+				throw std::runtime_error("pr_to_row_override - string does not fit in row");
+			}
+			for (size_t i = 0; i < str.length(); i++) {
+				row[idx_start + i] = str[i];
+			}
+			return center;
+		};
 
-			// Print / \ connections row:
-			// - each / must start under the space before the first char
-			// - each \ must start under the last char
-			if (i < layers.size() - 1) {
-				std::vector<Nod<TVN>*> r = layers[i]; // row
-				std::vector<Nod<TVN>*> r_next = layers[i + 1]; // next row
+		// <METHOD> 
+		// unghi: (0, 90): '/'
+		// unghi: (90, 180): '\'
+		// unghi: 90: '-'
+		// unghi: 0: '|'
+		auto get_angle_char = [](double angle) {
+			if (angle > 0.0 && angle < 90.0) {
+				return '/';
+			} else if (angle > 90.0 && angle < 180.0) {
+				return '\\';
+			} else if (angle == 90.0) {
+				return '-';
+			} else if (angle == 0.0 || angle == 180.0) {
+				return '|';
+			} else {
+				return '?'; // unghi neasteptat
+			}
+		};
+		// <METHOD>
+		// mat = matrix to print to; 
+		// start = (col, row) to start the line from (nu deseneaza la aceste coord)
+		// end = (col, row) to end the line at (nu deseneaza la aceste coord)
+		auto pr_walk_override = [get_angle_char](std::vector<std::vector<char>>& mat, std::tuple<size_t, size_t> start, std::tuple<size_t, size_t> end) {
+			// x = col, y = row
+			double s_x = get<0>(start), s_y = get<1>(start);
+			double e_x = get<0>(end), e_y = get<1>(end);
+			
+			double dist = sqrt(pow(e_x - s_x, 2) + pow(e_y - s_y, 2));
+			double angle = abs(atan2(s_y - e_y, s_x - e_x)) * 180 / std::numbers::pi;
+
+			double step = 1.0 / (dist * sqrt(2)); // sa nu rateze nicio casuta
+			std::cout << "Walk: start(" << s_x << ", " << s_y << "), end(" << e_x << ", " << e_y << ")" << ", angle: " << angle << ", dist: " << dist << ", step: "<< step << std::endl;
+			
+			size_t prev_x = s_x, prev_y = s_y; // prev visited cell (go from start to end)
+			std::vector<std::tuple<size_t, size_t>> path_taken; // for correcting L into /
+			for (double t = step; t <= 1.0; t += step) {
+				double c_x_d = s_x + (e_x - s_x) * t;
+				double c_y_d = s_y + (e_y - s_y) * t;
+				size_t c_x = round(c_x_d);
+				size_t c_y = round(c_y_d);
+
+				if (c_x == s_x && c_y == s_y)
+					continue; // do not touch start cell
+				if (c_x == e_x && c_y == e_y)
+					continue; // do not touch end cell
+				if (c_x == prev_x && c_y == prev_y)
+					continue; // skip visited cell
+
+				std::cout << " - walk step t=" << t << ": visit ("<< c_x_d << ", " << c_y_d << ") -> (" << c_x << ", " << c_y << ")" << std::endl;
+				if (mat[c_y][c_x] != ' ') { // do not override non-empty
+					std::cout << " - skip cell (" << c_x << ", " << c_y << "); not empty (contains '" << mat[c_y][c_x] << "')" << std::endl;
+					continue;
+				}
+				path_taken.push_back({ c_x, c_y }); 
+				char ch_place = get_angle_char(angle);
+
+				if (c_y == prev_y) { // same row, different col -> '-'
+					ch_place = '-';
+				} else if (c_x == prev_x) { // same col, different row -> '|'
+					ch_place = '|';
+				} else { // different row, different col -> '/' or '\'
+					ch_place = get_angle_char(angle);
+				}
+				mat[c_y][c_x] = ch_place;
+				std::cout << " - place char '" << ch_place << "' at (" << c_x << ", " << c_y << ")" << std::endl;
 				
-				int c_extra_pad = r.size() % 2 == 0 ? r_extra_pad : r_extra_pad - 1;
-				std::string c_extra_pad_str(c_extra_pad, ' '); 
-
-				for (int j = 0; j < r.size(); j++) {
-					//std::cout << c_extra_pad 
-					Nod<TVN>* n = r[j];
-					std::cout << c_extra_pad_str;
-
-					if (n == nullptr) {
-						std::cout << std::string(valMaxStrLen + 2, ' ');
-					} else {
-						char ch_stanga = n->c_stanga_ != nullptr ? '/' : ' ';
-						char ch_dreapta = n->c_dreapta_ != nullptr ? '\\' : ' ';
-						std::cout << ch_stanga << std::string(valMaxStrLen, ' ') << ch_dreapta;
-					}
+				// Check if char was placed in the 9x9 grid around the end point; if yes, stop the walk
+				int d_end_x = abs(e_x - c_x), d_end_y = abs(e_y - c_y);
+				if (std::max(d_end_x, d_end_y) <= 1) {
+					std::cout << " - reached end vicinity, stop walk\n";
+					break;
 				}
 
-				std::cout << "\n";
+				prev_x = c_x;
+				prev_y = c_y;
 			}
-		}
 
-		std::cout << std::string(ch_count_header_half * 2, '>') << std::endl;
+			// now look into path_taken, and only leave diagonal cells
+			for (int i = 1; i < path_taken.size(); i++) {
+				size_t path_a_x = std::get<0>(path_taken[i - 1]);
+				size_t path_a_y = std::get<1>(path_taken[i - 1]);
+				char path_a_ch = mat[path_a_y][path_a_x];
+
+				size_t path_b_x = std::get<0>(path_taken[i]);
+				size_t path_b_y = std::get<1>(path_taken[i]);
+				char path_b_ch = mat[path_b_y][path_b_x];
+
+				if (path_a_ch == '|' && path_b_ch == '-') {
+					if (path_b_x < path_a_x) { // -> /
+						mat[path_b_y][path_b_x] = '/'; 
+						mat[path_a_y][path_a_x] = ' ';
+					} else {
+						mat[path_b_y][path_b_x] = ' '; 
+						mat[path_a_y][path_a_x] = '\\';
+					}
+
+				}
+			}
+
+			std::cout << "Walk end\n\n";
+		};
+
+		std::vector<std::vector<char>> pr_lines; // char matrix
+		std::vector<size_t> lr_centers; // tine minte centrul fiecarui nod din ultimul rand 
+		// indiferent daca este desenat sau nu
+
+#pragma region Construieste Ultimul Rand
+		std::vector<char> lr_line;
+		std::vector<Nod<TVN>*> lr_vals = layers.back();
+		std::string lr_pad_str = std::string(pr_space_min, ' ');
+		
+		for (int i = 0; i < lr_vals.size(); i++) {
+			std::string n_str;
+			if (lr_vals[i] != nullptr) {
+				n_str = pr_val_constrained(lr_vals[i]->getValoare());
+			} else {
+				n_str = std::string(pr_val_sz, ' ');
+			}
+			
+			size_t ch_center = pr_to_row(lr_line, n_str); // print value
+			lr_centers.push_back(ch_center); // tine minte centrul nodului curent
+
+			if (i < lr_vals.size() - 1)
+				pr_to_row(lr_line, lr_pad_str); // print padding
+
+			//std::cout << "lr_centers: push back " << ch_center << std::endl;
+		}
+		pr_lines.push_back(lr_line);
+#pragma endregion
+
+#pragma region Construieste randurile Superioare
+		// fiecare nod superior trebuie sa fie in centrul nodurilor copil din randul inferior
+		std::vector<size_t> line_centers_prev = lr_centers;
+		int logical_height = 1; // height from base
+		for (int i = layers.size() - 2; i >= 0; i--) {
+			std::vector<Nod<TVN>*> line = layers[i];
+			
+			std::vector<size_t> line_centers; // -1 pentru noduri nule
+			// push a number of empty lines into pr_lines, at 0
+			size_t rows_insert = logical_height == 1 ? 2 : 3; // daca e primul rand deasupra ultimului rand, avem nevoie de 1 rand pentru noduri si 1 rand pentru legaturi; 
+			                                                  // altfel, avem nevoie de 1 rand pentru noduri si 2 randuri pentru legaturi
+			size_t link_rows = rows_insert - 1;
+
+			for (int j = 0; j < rows_insert; j++)
+				pr_lines.insert(pr_lines.begin(), std::vector<char>(lr_line.size(), ' '));
+
+			// now print values on row 0 and draw legaturi
+			for (int j = 0; j < line.size(); j++) {
+				Nod<TVN>* n = line[j];
+
+				size_t ch_left_center = line_centers_prev[j * 2];
+				size_t ch_right_center = line_centers_prev[j * 2 + 1];
+				size_t center = (ch_left_center + ch_right_center) / 2;
+				
+				if (n != nullptr)
+					std::cout << "layer: " << i << ", node: " << n->getValoare() 
+						<< ", unite with ch.left(pos): " << ch_left_center << ", ch.right(pos): " << ch_right_center << std::endl;
+				
+				std::string n_str = (n != nullptr) ? pr_val_constrained(n->getValoare()) : std::string(pr_val_sz, ' ');
+				pr_to_row_override(pr_lines[0], n_str, center); // print value to row 0 of layer_rows
+				line_centers.push_back(center);
+				std::cout << "Node center: " << center << std::endl;
+
+				// Print legaturi 
+				if (n != nullptr) {
+					// positions are in (col, row) format
+					if (n->getCStanga() != nullptr) {
+
+						std::tuple<size_t, size_t> start, end;
+						if (link_rows == 1) { // start and end for only 1 row for conn
+							start = std::tuple<size_t, size_t>(center, 0); // start at center of node
+							end = std::tuple<size_t, size_t>(ch_left_center + (pr_val_sz / 2 - 1), rows_insert); // end at right corner of child node
+
+						} else { // start and end for 2 rows for conn
+							start = std::tuple<size_t, size_t>(center - pr_val_sz / 2, 0);
+							end = std::tuple<size_t, size_t>(ch_left_center + (pr_val_sz / 2), rows_insert);
+						}
+						
+						pr_walk_override(pr_lines, start, end);
+					}
+					if (n->getCDreapta() != nullptr) {
+
+						std::tuple<size_t, size_t> start, end;
+						if (link_rows == 1) { // start and end for only 1 row for conn
+							start = std::tuple<size_t, size_t>(center, 0); // start at center of node
+							end = std::tuple<size_t, size_t>(ch_right_center - (pr_val_sz / 2), rows_insert); // end at left corner of child node
+
+						} else { // start and end for 2 rows for conn
+							start = std::tuple<size_t, size_t>(center + pr_val_sz / 2, 0);
+							end = std::tuple<size_t, size_t>(ch_right_center - (pr_val_sz / 2), rows_insert);
+						}
+
+						pr_walk_override(pr_lines, start, end);
+					}
+				}
+			}
+
+			line_centers_prev = line_centers;
+			logical_height++;
+		}
+#pragma endregion
+
+		pr_char_matrix(pr_lines);
 	}
+
 #pragma endregion
 };

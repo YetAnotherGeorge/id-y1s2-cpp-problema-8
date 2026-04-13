@@ -10,7 +10,12 @@ int main() {
 	//std::vector<int> v = genereazaSecventa(10, 0, 20);
 	//printeazaVector(v, "Secventa generata");
 
-	std::vector<int> v = { 100, 50, 175, 25, 150, 200 };
+	std::vector<int> v = { 
+		100, 
+		50, 150, 
+		12, 75, 140, 170,
+		1, 13, 51, 76, 130, 145, 160, 180};
+
 	ArboreBinar<int>* arbore = new ArboreBinar<int>();
 	for (int i = 0; i < v.size(); i++) {
 		arbore->insertBST(v[i]);

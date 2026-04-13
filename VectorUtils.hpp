@@ -109,7 +109,7 @@ std::vector<int> genereazaSecventaOrdonata(int nrElem, int min, int max) {
 	// daca max - min > nrElem => vor lipsi mereu elemente din intervalul [min, max)
 	if (nrOut > nrElem) {
 		int cap = max; // exclusive end
-		for (int i = arr.size() - 1; i >= 0; i--) {
+     for (size_t i = arr.size(); i-- > 0;) {
 			int n = arr[i];
 			int d = cap - n;
 			if (d > 0) {

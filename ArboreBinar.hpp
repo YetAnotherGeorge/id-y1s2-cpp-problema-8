@@ -76,7 +76,7 @@ public:
    /// <param name="valMaxStrLen">Lungimea maxima a valorii printata ca string</param>
    void AfiseazaRecursiv(int valMaxStrLen) const {
       if (radacina_ != nullptr) {
-         radacina_->AfiseazaRecursiv(valMaxStrLen);
+         radacina_->AfiseazaRecursiv();
       } else {
          std::cout << ">>>>>>>>>>>>>>>> ARBORE GOL" << std::endl;
       }
