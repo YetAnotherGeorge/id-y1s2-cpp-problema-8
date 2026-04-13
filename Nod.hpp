@@ -335,12 +335,18 @@ public:
 				return val_str;
 			}
 		};
-		// <METHOD> print char matrix (without color insertion)
-		auto pr_char_matrix = [](const std::vector<std::vector<char>>& char_matrix) {
-			for (const std::vector<char>& line : char_matrix) {
-				for (char c : line) {
-					std::cout << c;
+		// <METHOD> print char matrix; for each cell, print color from pr_colors (if set) then char from char_matrix
+		// color_matrix rows have one extra trailing slot (index row.size()) for a post-row color code
+		auto pr_char_matrix = [](const std::vector<std::vector<char>>& char_matrix, const std::vector<std::vector<std::optional<std::string>>>& color_matrix) {
+			for (size_t row = 0; row < char_matrix.size(); row++) {
+				for (size_t col = 0; col < char_matrix[row].size(); col++) {
+					if (col < color_matrix[row].size() && color_matrix[row][col].has_value())
+						std::cout << color_matrix[row][col].value();
+					std::cout << char_matrix[row][col];
 				}
+				size_t trailing = char_matrix[row].size();
+				if (trailing < color_matrix[row].size() && color_matrix[row][trailing].has_value())
+					std::cout << color_matrix[row][trailing].value();
 				std::cout << std::endl;
 			}
 		};
@@ -398,15 +404,15 @@ public:
 			// x = col, y = row
 			double s_x = get<0>(start), s_y = get<1>(start);
 			double e_x = get<0>(end), e_y = get<1>(end);
-			
+
 			double dist = sqrt(pow(e_x - s_x, 2) + pow(e_y - s_y, 2));
 			double angle = abs(atan2(s_y - e_y, s_x - e_x)) * 180 / std::numbers::pi;
 
 			double step = 1.0 / (dist * sqrt(2)); // sa nu rateze nicio casuta
 #ifdef DEBUG_AFISEAZA_RECURSIV
-			std::cout << "Walk: start(" << s_x << ", " << s_y << "), end(" << e_x << ", " << e_y << ")" << ", angle: " << angle << ", dist: " << dist << ", step: "<< step << std::endl;
+			std::cout << "Walk: start(" << s_x << ", " << s_y << "), end(" << e_x << ", " << e_y << ")" << ", angle: " << angle << ", dist: " << dist << ", step: " << step << std::endl;
 #endif
-			
+
 			size_t prev_x = s_x, prev_y = s_y; // prev visited cell (go from start to end)
 			std::vector<std::tuple<size_t, size_t>> path_taken; // for correcting L into /
 			for (double t = step; t <= 1.0; t += step) {
@@ -422,8 +428,8 @@ public:
 				if (c_x == prev_x && c_y == prev_y)
 					continue; // skip visited cell
 
-				#ifdef DEBUG_AFISEAZA_RECURSIV
-				std::cout << " - walk step t=" << t << ": visit ("<< c_x_d << ", " << c_y_d << ") -> (" << c_x << ", " << c_y << ")" << std::endl;
+#ifdef DEBUG_AFISEAZA_RECURSIV
+				std::cout << " - walk step t=" << t << ": visit (" << c_x_d << ", " << c_y_d << ") -> (" << c_x << ", " << c_y << ")" << std::endl;
 #endif
 				if (mat[c_y][c_x] != ' ') { // do not override non-empty
 #ifdef DEBUG_AFISEAZA_RECURSIV
@@ -431,7 +437,7 @@ public:
 #endif
 					continue;
 				}
-				path_taken.push_back({ c_x, c_y }); 
+				path_taken.push_back({ c_x, c_y });
 				char ch_place = get_angle_char(angle);
 
 				if (c_y == prev_y) { // same row, different col -> '-'
@@ -445,7 +451,7 @@ public:
 #ifdef DEBUG_AFISEAZA_RECURSIV
 				std::cout << " - place char '" << ch_place << "' at (" << c_x << ", " << c_y << ")" << std::endl;
 #endif
-				
+
 				// Check if char was placed in the 9x9 grid around the end point; if yes, stop the walk
 				int d_end_x = abs(e_x - c_x), d_end_y = abs(e_y - c_y);
 				if (std::max(d_end_x, d_end_y) <= 1) {
@@ -471,22 +477,23 @@ public:
 
 				if (path_a_ch == '|' && path_b_ch == '-') {
 					if (path_b_x < path_a_x) { // -> /
-						mat[path_b_y][path_b_x] = '/'; 
+						mat[path_b_y][path_b_x] = '/';
 						mat[path_a_y][path_a_x] = ' ';
 					} else {
-						mat[path_b_y][path_b_x] = ' '; 
+						mat[path_b_y][path_b_x] = ' ';
 						mat[path_a_y][path_a_x] = '\\';
 					}
 
 				}
 			}
 
-			#ifdef DEBUG_AFISEAZA_RECURSIV
-						std::cout << "Walk end\n\n";
-			#endif
-					};
+#ifdef DEBUG_AFISEAZA_RECURSIV
+			std::cout << "Walk end\n\n";
+#endif
+		};
 
 		std::vector<std::vector<char>> pr_lines; // char matrix
+		std::vector<std::vector<std::optional<std::string>>> pr_colors; // color matrix, mirrors pr_lines
 		std::vector<size_t> lr_centers; // tine minte centrul fiecarui nod din ultimul rand 
 		// indiferent daca este desenat sau nu
 
@@ -494,7 +501,7 @@ public:
 		std::vector<char> lr_line;
 		std::vector<Nod<TVN>*> lr_vals = layers.back();
 		std::string lr_pad_str = std::string(pr_space_min, ' ');
-		
+
 		for (int i = 0; i < lr_vals.size(); i++) {
 			std::string n_str;
 			if (lr_vals[i] != nullptr) {
@@ -502,7 +509,7 @@ public:
 			} else {
 				n_str = std::string(pr_val_sz, ' ');
 			}
-			
+
 			size_t ch_center = pr_to_row(lr_line, n_str); // print value
 			lr_centers.push_back(ch_center); // tine minte centrul nodului curent
 
@@ -512,6 +519,21 @@ public:
 			//std::cout << "lr_centers: push back " << ch_center << std::endl;
 		}
 		pr_lines.push_back(lr_line);
+		// adauga coloring pentru ultimul rand
+		{
+			std::vector<std::optional<std::string>> lr_colors_row(lr_line.size() + 1, std::nullopt);
+			size_t lr_pos = 0;
+			for (int i = 0; i < (int)lr_vals.size(); i++) {
+				if (lr_vals[i] != nullptr) {
+					lr_colors_row[lr_pos] = std::string(lr_vals[i]->isNegru() ? kColorReset : kColorRosu);
+					lr_colors_row[lr_pos + pr_val_sz] = std::string(kColorReset);
+				}
+				lr_pos += pr_val_sz;
+				if (i < (int)lr_vals.size() - 1)
+					lr_pos += pr_space_min;
+			}
+			pr_colors.push_back(lr_colors_row);
+		}
 #pragma endregion
 
 #pragma region Construieste randurile Superioare
@@ -520,15 +542,17 @@ public:
 		int logical_height = 1; // height from base
 		for (int i = layers.size() - 2; i >= 0; i--) {
 			std::vector<Nod<TVN>*> line = layers[i];
-			
+
 			std::vector<size_t> line_centers; // -1 pentru noduri nule
 			// push a number of empty lines into pr_lines, at 0
 			size_t rows_insert = logical_height == 1 ? 2 : 3; // daca e primul rand deasupra ultimului rand, avem nevoie de 1 rand pentru noduri si 1 rand pentru legaturi; 
-			                                                  // altfel, avem nevoie de 1 rand pentru noduri si 2 randuri pentru legaturi
+			// altfel, avem nevoie de 1 rand pentru noduri si 2 randuri pentru legaturi
 			size_t link_rows = rows_insert - 1;
 
-			for (int j = 0; j < rows_insert; j++)
+			for (int j = 0; j < rows_insert; j++) {
 				pr_lines.insert(pr_lines.begin(), std::vector<char>(lr_line.size(), ' '));
+				pr_colors.insert(pr_colors.begin(), std::vector<std::optional<std::string>>(lr_line.size() + 1, std::nullopt));
+			}
 
 			// now print values on row 0 and draw legaturi
 			for (int j = 0; j < line.size(); j++) {
@@ -537,15 +561,22 @@ public:
 				size_t ch_left_center = line_centers_prev[j * 2];
 				size_t ch_right_center = line_centers_prev[j * 2 + 1];
 				size_t center = (ch_left_center + ch_right_center) / 2;
-				
-				#ifdef DEBUG_AFISEAZA_RECURSIV
-								if (n != nullptr)
-									std::cout << "layer: " << i << ", node: " << n->getValoare() 
-										<< ", unite with ch.left(pos): " << ch_left_center << ", ch.right(pos): " << ch_right_center << std::endl;
-				#endif
-				
+
+#ifdef DEBUG_AFISEAZA_RECURSIV
+				if (n != nullptr)
+					std::cout << "layer: " << i << ", node: " << n->getValoare()
+					<< ", unite with ch.left(pos): " << ch_left_center << ", ch.right(pos): " << ch_right_center << std::endl;
+#endif
+
 				std::string n_str = (n != nullptr) ? pr_val_constrained(n->getValoare()) : std::string(pr_val_sz, ' ');
 				pr_to_row_override(pr_lines[0], n_str, center); // print value to row 0 of layer_rows
+				if (n != nullptr) {
+					size_t idx_start = center - pr_val_sz / 2;
+					if (!n->isNegru()) {
+						pr_colors[0][idx_start] = std::string(kColorRosu);
+						pr_colors[0][idx_start + pr_val_sz] = std::string(kColorReset);
+					}
+				}
 				line_centers.push_back(center);
 #ifdef DEBUG_AFISEAZA_RECURSIV
 				std::cout << "Node center: " << center << std::endl;
@@ -565,7 +596,7 @@ public:
 							start = std::tuple<size_t, size_t>(center - pr_val_sz / 2, 0);
 							end = std::tuple<size_t, size_t>(ch_left_center + (pr_val_sz / 2), rows_insert);
 						}
-						
+
 						pr_walk_override(pr_lines, start, end);
 					}
 					if (n->getCDreapta() != nullptr) {
@@ -592,7 +623,7 @@ public:
 
 
 		std::cout << std::string(lr_sz / 2 - 2, '>') << " BST " << std::string(lr_sz / 2 - 2, '>') << "\n";
-		pr_char_matrix(pr_lines);
+		pr_char_matrix(pr_lines, pr_colors);
 		std::cout << std::string(lr_sz, '<') << "\n";
 	}
 
