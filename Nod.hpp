@@ -330,7 +330,7 @@ public:
 			if (val_str.size() > pr_val_sz) {
 				return val_str.substr(0, pr_val_sz - 2) + "..";
 			} else if (val_str.size() < pr_val_sz) {
-				return std::string(pr_val_sz - val_str.size(), '0') + val_str;
+				return std::string(pr_val_sz - val_str.size(), ' ') + val_str;
 			} else {
 				return val_str;
 			}
@@ -403,7 +403,9 @@ public:
 			double angle = abs(atan2(s_y - e_y, s_x - e_x)) * 180 / std::numbers::pi;
 
 			double step = 1.0 / (dist * sqrt(2)); // sa nu rateze nicio casuta
+#ifdef DEBUG_AFISEAZA_RECURSIV
 			std::cout << "Walk: start(" << s_x << ", " << s_y << "), end(" << e_x << ", " << e_y << ")" << ", angle: " << angle << ", dist: " << dist << ", step: "<< step << std::endl;
+#endif
 			
 			size_t prev_x = s_x, prev_y = s_y; // prev visited cell (go from start to end)
 			std::vector<std::tuple<size_t, size_t>> path_taken; // for correcting L into /
@@ -420,9 +422,13 @@ public:
 				if (c_x == prev_x && c_y == prev_y)
 					continue; // skip visited cell
 
+				#ifdef DEBUG_AFISEAZA_RECURSIV
 				std::cout << " - walk step t=" << t << ": visit ("<< c_x_d << ", " << c_y_d << ") -> (" << c_x << ", " << c_y << ")" << std::endl;
+#endif
 				if (mat[c_y][c_x] != ' ') { // do not override non-empty
+#ifdef DEBUG_AFISEAZA_RECURSIV
 					std::cout << " - skip cell (" << c_x << ", " << c_y << "); not empty (contains '" << mat[c_y][c_x] << "')" << std::endl;
+#endif
 					continue;
 				}
 				path_taken.push_back({ c_x, c_y }); 
@@ -436,12 +442,16 @@ public:
 					ch_place = get_angle_char(angle);
 				}
 				mat[c_y][c_x] = ch_place;
+#ifdef DEBUG_AFISEAZA_RECURSIV
 				std::cout << " - place char '" << ch_place << "' at (" << c_x << ", " << c_y << ")" << std::endl;
+#endif
 				
 				// Check if char was placed in the 9x9 grid around the end point; if yes, stop the walk
 				int d_end_x = abs(e_x - c_x), d_end_y = abs(e_y - c_y);
 				if (std::max(d_end_x, d_end_y) <= 1) {
+#ifdef DEBUG_AFISEAZA_RECURSIV
 					std::cout << " - reached end vicinity, stop walk\n";
+#endif
 					break;
 				}
 
@@ -471,8 +481,10 @@ public:
 				}
 			}
 
-			std::cout << "Walk end\n\n";
-		};
+			#ifdef DEBUG_AFISEAZA_RECURSIV
+						std::cout << "Walk end\n\n";
+			#endif
+					};
 
 		std::vector<std::vector<char>> pr_lines; // char matrix
 		std::vector<size_t> lr_centers; // tine minte centrul fiecarui nod din ultimul rand 
@@ -526,14 +538,18 @@ public:
 				size_t ch_right_center = line_centers_prev[j * 2 + 1];
 				size_t center = (ch_left_center + ch_right_center) / 2;
 				
-				if (n != nullptr)
-					std::cout << "layer: " << i << ", node: " << n->getValoare() 
-						<< ", unite with ch.left(pos): " << ch_left_center << ", ch.right(pos): " << ch_right_center << std::endl;
+				#ifdef DEBUG_AFISEAZA_RECURSIV
+								if (n != nullptr)
+									std::cout << "layer: " << i << ", node: " << n->getValoare() 
+										<< ", unite with ch.left(pos): " << ch_left_center << ", ch.right(pos): " << ch_right_center << std::endl;
+				#endif
 				
 				std::string n_str = (n != nullptr) ? pr_val_constrained(n->getValoare()) : std::string(pr_val_sz, ' ');
 				pr_to_row_override(pr_lines[0], n_str, center); // print value to row 0 of layer_rows
 				line_centers.push_back(center);
+#ifdef DEBUG_AFISEAZA_RECURSIV
 				std::cout << "Node center: " << center << std::endl;
+#endif
 
 				// Print legaturi 
 				if (n != nullptr) {
@@ -574,7 +590,10 @@ public:
 		}
 #pragma endregion
 
+
+		std::cout << std::string(lr_sz / 2 - 2, '>') << " BST " << std::string(lr_sz / 2 - 2, '>') << "\n";
 		pr_char_matrix(pr_lines);
+		std::cout << std::string(lr_sz, '<') << "\n";
 	}
 
 #pragma endregion
