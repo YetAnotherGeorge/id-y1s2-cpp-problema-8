@@ -2,6 +2,8 @@
 #include <iostream>
 #include "Nod.hpp"
 
+#define DEBUG_INSERT_RED_BLACK
+
 /// <summary>
 /// Arbore binar. Poate fi complet gol
 /// </summary>
@@ -68,6 +70,106 @@ public:
          return this->radacina_->insertValueBST(val);
       }
    }
+   /// <summary>
+   /// Insereaza valoarea folosind algoritmul red-black
+   /// </summary>
+   /// <param name="val"></param>
+   /// <returns></returns>
+   Nod<TVN>* insertRedBlackBST(TVN val) {
+      // 1. BST insert; new node is red
+      Nod<TVN>* inserted = this->insertBST(val);
+      if (radacina_ == inserted) {
+         radacina_->setIsNegru(true); // root is always black
+         return radacina_;
+      }
+      inserted->setIsNegru(false);
+
+      // Fixup loop: runs while there is a red-red parent-child violation
+      Nod<TVN>* current = inserted;
+      while (current != radacina_ && !current->getParinte()->getIsNegru()) {
+         Nod<TVN>* p = current->getParinte();
+         Nod<TVN>* g = p->getParinte();
+         if (g == nullptr) break;
+
+         Nod<TVN>* uncle = g->getOtherChild(p);
+         bool uncle_black = uncle == nullptr || uncle->getIsNegru();
+
+#ifdef DEBUG_INSERT_RED_BLACK
+         std::cout << "insertRedBlackBST: Parent is red for node: " << current->getValoare() << ", need to fix tree" << std::endl;
+         if (uncle != nullptr)
+            std::cout << "insertRedBlackBST: Uncle: " << uncle->getValoare() << ", uncle_black: " << uncle_black << std::endl;
+         else
+            std::cout << "insertRedBlackBST: Uncle: NULL (BLACK), uncle_black: " << uncle_black << std::endl;
+#endif
+
+         if (!uncle_black) {
+            // Uncle is red: recolor P and U to black, G to red, then repeat from G
+#ifdef DEBUG_INSERT_RED_BLACK
+            std::cout << "insertRedBlackBST: Uncle is red for node: " << current->getValoare() << ", recoloring parent, uncle and grandparent" << std::endl;
+#endif
+            p->setIsNegru(true);
+            uncle->setIsNegru(true);
+            g->setIsNegru(false); // may violate at G's level; loop will handle it
+            current = g;
+         } else {
+            // Uncle is black: one of 4 rotation cases (never need further loop iteration)
+            Nod<TVN>* x = current;
+
+            // 4.1 Left Left
+            if (x == p->getCStanga() && p == g->getCStanga()) {
+#ifdef DEBUG_INSERT_RED_BLACK
+               std::cout << "insertRedBlackBST: Case 4.1 Left Left for node: " << x->getValoare() << std::endl;
+#endif
+               auto new_root = g->RightRotate();
+               if (g == this->radacina_) this->radacina_ = new_root;
+               bool g_black = g->getIsNegru();
+               g->setIsNegru(p->getIsNegru());
+               p->setIsNegru(g_black);
+            }
+            // 4.2 Left Right
+            else if (x == p->getCDreapta() && p == g->getCStanga()) {
+#ifdef DEBUG_INSERT_RED_BLACK
+               std::cout << "insertRedBlackBST: Case 4.2 Left Right for node: " << x->getValoare() << std::endl;
+#endif
+               p->LeftRotate();
+               auto new_root = g->RightRotate();
+               if (g == this->radacina_) this->radacina_ = new_root;
+               bool g_black = g->getIsNegru();
+               g->setIsNegru(x->getIsNegru());
+               x->setIsNegru(g_black);
+            }
+            // 4.3 Right Right
+            else if (x == p->getCDreapta() && p == g->getCDreapta()) {
+#ifdef DEBUG_INSERT_RED_BLACK
+               std::cout << "insertRedBlackBST: Case 4.3 Right Right for node: " << x->getValoare() << std::endl;
+#endif
+               auto new_root = g->LeftRotate();
+               if (g == this->radacina_) this->radacina_ = new_root;
+               bool g_black = g->getIsNegru();
+               g->setIsNegru(p->getIsNegru());
+               p->setIsNegru(g_black);
+            }
+            // 4.4 Right Left
+            else if (x == p->getCStanga() && p == g->getCDreapta()) {
+#ifdef DEBUG_INSERT_RED_BLACK
+               std::cout << "insertRedBlackBST: Case 4.4 Right Left for node: " << x->getValoare() << std::endl;
+#endif
+               p->RightRotate();
+               auto new_root = g->LeftRotate();
+               if (g == this->radacina_) this->radacina_ = new_root;
+               bool g_black = g->getIsNegru();
+               g->setIsNegru(x->getIsNegru());
+               x->setIsNegru(g_black);
+            }
+
+            break; // rotation cases never cascade further
+         }
+      }
+
+      radacina_->setIsNegru(true); // root is always black
+      return inserted;
+   }
+
 #pragma endregion
 
    /// <summary>

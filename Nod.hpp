@@ -54,7 +54,7 @@ template <typename TVN> class Nod {
 private:
 	TVN valoare_;
 	int contor_; // DEFAULT 1
-	bool negru_; // true daca nodul este negru, false daca este rosu (pentru arbori rosii-negri); DEFAULT false
+	bool negru_; // true daca nodul este negru, false daca este rosu (pentru arbori rosii-negri); DEFA.setULT false
 
 	Nod<TVN>* parinte_; // NULL daca nodul este radacina
 	Nod<TVN>* c_stanga_; // copilul din stanga (cu valoare mai mica)
@@ -236,6 +236,7 @@ public:
 
 	/// <summary>
 	/// Insereaza valoarea respectand proprietatile unui arbore binar de cautare. Daca valoarea exista deja, incrementeaza contorul nodului existent.
+	/// Nodul inserat va avea culoarea rosie pentru a respecta red-black tree insertion
 	/// </summary>
 	/// <param name="val"></param>
 	/// <returns>
@@ -266,6 +267,157 @@ public:
 			}
 		}
 	}
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <returns>
+	///	nullptr if no uncle
+	/// </returns>
+	Nod<TVN>* getUncle() {
+		Nod<TVN>* p = this->parinte_;
+		if (p == nullptr) return nullptr;
+
+		Nod<TVN>* g = p->parinte_;
+		if (g == nullptr) return nullptr;
+
+		return g->getOtherChild(p);
+	}
+	/// <summary>
+	/// Updates parent for newChild
+	/// </summary>
+	/// <param name="oldChild">must not be null. Parent will be set to null</param>
+	/// <param name="newChild">can be null. Parent will be set to this</param>
+	void replaceChild(Nod<TVN>* oldChild, Nod<TVN>* newChild) {
+		if (oldChild == nullptr)
+			throw std::runtime_error("replaceChild error: oldChild is null");
+
+		if (this->c_stanga_ == oldChild) {
+			this->c_stanga_ = newChild;
+		} else if (this->c_dreapta_ == oldChild) {
+			this->c_dreapta_ = newChild;
+		} else {
+			throw std::runtime_error("replaceChild error: oldChild is not a child of this node");
+		}
+
+		// Parent new child & unlink from its current parent
+		if (newChild != nullptr) {
+			// now unlink newChild from its current parent manually
+			Nod<TVN>* newChParent = newChild->parinte_;
+			if (newChParent != nullptr) {
+				if (newChParent->c_stanga_ == newChild) {
+					newChParent->c_stanga_ = nullptr;
+				} else if (newChParent->c_dreapta_ == newChild) {
+					newChParent->c_dreapta_ = nullptr;
+				}
+			}
+			// parent newChild to this
+			newChild->parinte_ = this;
+		}
+
+
+		// Unparent old child
+		oldChild->parinte_ = nullptr;
+	}
+
+	/// <summary>
+	/// set left child: remove newLeftChild from parent and set it as left child of this
+	/// null values are allowed
+	/// </summary>
+	/// <param name="newLeftChild"></param>
+	void linkChildLeft(Nod<TVN>* newLeftChild) {
+		if (this->c_stanga_ != nullptr) {
+			this->replaceChild(this->c_stanga_, newLeftChild);
+		} else {
+			// unlink from parent
+			if (newLeftChild != nullptr) {
+				if (newLeftChild->parinte_ != nullptr)
+					newLeftChild->parinte_->replaceChild(newLeftChild, nullptr);
+				newLeftChild->parinte_ = this;
+			}
+			this->c_stanga_ = newLeftChild;
+		}
+	}
+	/// <summary>
+	/// set right child: remove newLeftChild from parent and set it as left child of this
+	/// null values are allowed
+	/// </summary>
+	/// <param name="newLeftChild"></param>
+	void linkChildRight(Nod<TVN>* newRightChild) {
+		if (this->c_dreapta_ != nullptr) {
+			this->replaceChild(this->c_dreapta_, newRightChild);
+		} else {
+			// unlink from parent
+			if (newRightChild != nullptr) {
+				if (newRightChild->parinte_ != nullptr)
+					newRightChild->parinte_->replaceChild(newRightChild, nullptr);
+				newRightChild->parinte_ = this;
+			}
+			this->c_dreapta_ = newRightChild;
+		}
+	}
+
+
+	/// <summary>
+	/// its left child becomes the new root of the subtree, and the original node becomes the right child of the new root.
+	/// </summary>
+	/// <returns>New tree root</returns>
+	Nod<TVN>* RightRotate() {
+		// Before: G (this)          After:     P
+		//        / \                          / \
+      //       P   U                        X   G
+		//      / \                              / \
+      //     X   Y                            Y   U
+
+		if (this->c_stanga_ == nullptr)
+			throw std::runtime_error("RightRotate error: left child is null");
+
+		// G - P link -> reverse
+		// G - U link remains intact
+		// P - X link remains intact
+		// P - Y link -> takes P's place
+
+		Nod<TVN>* g = this; // not null
+		Nod<TVN>* p = g->c_stanga_; // not null
+		Nod<TVN>* x = p->c_stanga_; // nullable
+		Nod<TVN>* y = p->c_dreapta_; // nullable
+
+		// replace G with P in the eyes of G's parent
+		if (g->parinte_ != nullptr)
+			g->parinte_->replaceChild(g, p);
+
+		p->linkChildRight(g);
+		g->linkChildLeft(y);
+
+		return p;
+	}
+	/// <summary>
+	/// its right child becomes the new root of the subtree, and the original node becomes the left child of the new root.
+	/// </summary>
+	/// <returns>New tree root</returns>
+	Nod<TVN>* LeftRotate() {
+		// Before:   G (this)    After:    P
+		//          / \                   / \
+		//         U   P                 G   X
+		//            / \               / \
+		//           Y   X             U   Y		
+
+		if (this->c_dreapta_ == nullptr)
+			throw std::runtime_error("LeftRotate error: right child is null");
+
+		Nod<TVN>* g = this;
+		Nod<TVN>* p = g->c_dreapta_; // not null
+		Nod<TVN>* x = p->c_dreapta_; // nullable
+		Nod<TVN>* y = p->c_stanga_; // nullable
+
+		// replace G with P in the eyes of G's parent
+		if (g->parinte_ != nullptr)
+			g->parinte_->replaceChild(g, p);
+
+		p->linkChildLeft(g);
+		g->linkChildRight(y);
+
+		return p;
+	}
 #pragma endregion
 
 #pragma region GETTERI_SETTERI
@@ -275,8 +427,11 @@ public:
 	int getContor() const {
 		return contor_;
 	}
-	bool isNegru() const {
+	bool getIsNegru() const {
 		return negru_;
+	}
+	void setIsNegru(bool negru) {
+		this->negru_ = negru;
 	}
 	Nod<TVN>* getParinte() const {
 		return parinte_;
@@ -301,6 +456,17 @@ public:
 			count++;
 		}
 		return count;
+	}
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="child"></param>
+	/// <returns></returns>
+	Nod<TVN>* getOtherChild(Nod<TVN>* child) {
+		if (c_stanga_ == child) return c_dreapta_;
+		if (c_dreapta_ == child) return c_stanga_;
+		return nullptr;
 	}
 #pragma endregion
 
@@ -525,7 +691,7 @@ public:
 			size_t lr_pos = 0;
 			for (int i = 0; i < (int)lr_vals.size(); i++) {
 				if (lr_vals[i] != nullptr) {
-					lr_colors_row[lr_pos] = std::string(lr_vals[i]->isNegru() ? kColorReset : kColorRosu);
+					lr_colors_row[lr_pos] = std::string(lr_vals[i]->getIsNegru() ? kColorReset : kColorRosu);
 					lr_colors_row[lr_pos + pr_val_sz] = std::string(kColorReset);
 				}
 				lr_pos += pr_val_sz;
@@ -572,7 +738,7 @@ public:
 				pr_to_row_override(pr_lines[0], n_str, center); // print value to row 0 of layer_rows
 				if (n != nullptr) {
 					size_t idx_start = center - pr_val_sz / 2;
-					if (!n->isNegru()) {
+					if (!n->getIsNegru()) {
 						pr_colors[0][idx_start] = std::string(kColorRosu);
 						pr_colors[0][idx_start + pr_val_sz] = std::string(kColorReset);
 					}
@@ -622,9 +788,10 @@ public:
 #pragma endregion
 
 
-		std::cout << std::string(lr_sz / 2 - 2, '>') << " BST " << std::string(lr_sz / 2 - 2, '>') << "\n";
+		int pad_h = std::max(lr_sz / 2 - 2, 5);
+		std::cout << std::string(pad_h, '>') << " BST " << std::string(pad_h, '>') << "\n";
 		pr_char_matrix(pr_lines, pr_colors);
-		std::cout << std::string(lr_sz, '<') << "\n";
+		std::cout << std::string(pad_h, '<') << std::string(5, '<') << std::string(pad_h, '<') << "\n";
 	}
 
 #pragma endregion
