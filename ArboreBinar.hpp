@@ -2,7 +2,7 @@
 #include <iostream>
 #include "Nod.hpp"
 
-#define DEBUG_INSERT_RED_BLACK
+// #define DEBUG_INSERT_RED_BLACK
 
 /// <summary>
 /// Arbore binar. Poate fi complet gol
@@ -120,7 +120,7 @@ public:
 #ifdef DEBUG_INSERT_RED_BLACK
                std::cout << "insertRedBlackBST: Case 4.1 Left Left for node: " << x->getValoare() << std::endl;
 #endif
-               auto new_root = g->RightRotate();
+               auto new_root = g->rightRotate();
                if (g == this->radacina_) this->radacina_ = new_root;
                bool g_black = g->getIsNegru();
                g->setIsNegru(p->getIsNegru());
@@ -131,8 +131,8 @@ public:
 #ifdef DEBUG_INSERT_RED_BLACK
                std::cout << "insertRedBlackBST: Case 4.2 Left Right for node: " << x->getValoare() << std::endl;
 #endif
-               p->LeftRotate();
-               auto new_root = g->RightRotate();
+               p->leftRotate();
+               auto new_root = g->rightRotate();
                if (g == this->radacina_) this->radacina_ = new_root;
                bool g_black = g->getIsNegru();
                g->setIsNegru(x->getIsNegru());
@@ -143,7 +143,7 @@ public:
 #ifdef DEBUG_INSERT_RED_BLACK
                std::cout << "insertRedBlackBST: Case 4.3 Right Right for node: " << x->getValoare() << std::endl;
 #endif
-               auto new_root = g->LeftRotate();
+               auto new_root = g->leftRotate();
                if (g == this->radacina_) this->radacina_ = new_root;
                bool g_black = g->getIsNegru();
                g->setIsNegru(p->getIsNegru());
@@ -154,8 +154,8 @@ public:
 #ifdef DEBUG_INSERT_RED_BLACK
                std::cout << "insertRedBlackBST: Case 4.4 Right Left for node: " << x->getValoare() << std::endl;
 #endif
-               p->RightRotate();
-               auto new_root = g->LeftRotate();
+               p->rightRotate();
+               auto new_root = g->leftRotate();
                if (g == this->radacina_) this->radacina_ = new_root;
                bool g_black = g->getIsNegru();
                g->setIsNegru(x->getIsNegru());
@@ -170,13 +170,32 @@ public:
       return inserted;
    }
 
+   /// <summary>
+   /// 
+   /// </summary>
+   /// <param name="values"></param>
+   void insertValuesBST(const std::vector<TVN>& values) {
+      for (const TVN& val : values) {
+         insertBST(val);
+      }
+   }
+   /// <summary>
+   /// 
+   /// </summary>
+   /// <param name="values"></param>
+   void insertValuesRedBlackBST(const std::vector<TVN>& values) {
+      for (const TVN& val : values) {
+         insertRedBlackBST(val);
+      }
+	}
 #pragma endregion
 
    /// <summary>
-   /// Afiseaza arborele incepand de la radacina
+   /// Afiseaza arborele incepand de la radacina. Lungimea valorii printate ca string
+   /// este pe moment limitata la 3
    /// </summary>
    /// <param name="valMaxStrLen">Lungimea maxima a valorii printata ca string</param>
-   void AfiseazaRecursiv(int valMaxStrLen) const {
+   void AfiseazaRecursiv() const {
       if (radacina_ != nullptr) {
          radacina_->AfiseazaRecursiv();
       } else {

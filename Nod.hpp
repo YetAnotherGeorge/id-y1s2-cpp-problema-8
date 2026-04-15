@@ -19,7 +19,7 @@ template <typename TVN> class Nod;
 
 template <typename TVN> struct TreeWalkInfo {
 	const int treeDepth; // adancimea maxima a arborelui
-	const std::vector<std::tuple<Nod<TVN>*, int>> walkNodes; // tuple de forma (nod, adancime), 0-indexed
+	const std::vector<std::tuple<Nod<TVN>*, int>> walkNodes; // tuple de forma (nod, adancime), adancimea este 0-indexed
 
 	/// <summary>
 	/// Pretty print result of walk
@@ -361,7 +361,7 @@ public:
 	/// its left child becomes the new root of the subtree, and the original node becomes the right child of the new root.
 	/// </summary>
 	/// <returns>New tree root</returns>
-	Nod<TVN>* RightRotate() {
+	Nod<TVN>* rightRotate() {
 		// Before: G (this)          After:     P
 		//        / \                          / \
       //       P   U                        X   G
@@ -394,7 +394,7 @@ public:
 	/// its right child becomes the new root of the subtree, and the original node becomes the left child of the new root.
 	/// </summary>
 	/// <returns>New tree root</returns>
-	Nod<TVN>* LeftRotate() {
+	Nod<TVN>* leftRotate() {
 		// Before:   G (this)    After:    P
 		//          / \                   / \
 		//         U   P                 G   X
@@ -417,6 +417,91 @@ public:
 		g->linkChildRight(y);
 
 		return p;
+	}
+
+	/// <summary>
+	/// Walk down the tree to the leftmost node
+	/// </summary>
+	/// <returns>will return this if no left child</returns>
+	Nod<TVN>* walkToLeftmost(int& depth) {
+		depth = 0;
+		Nod<TVN>* current = this;
+		while (current->c_stanga_ != nullptr) {
+			current = current->c_stanga_;
+			depth++;
+		}
+		return current;
+	}
+	/// <summary>
+	/// Walk down the tree to the rightmost node
+	/// </summary>
+	/// <returns>will retun this if no right child</returns>
+	Nod<TVN>* walkToRightmost(int& depth) {
+		Nod<TVN>* current = this;
+		depth = 0;
+		while (current->c_dreapta_ != nullptr) {
+			current = current->c_dreapta_;
+			depth++;
+		}
+		return current;
+	}
+
+	/// <summary>
+	/// Will not add null nodes to the walk
+	/// </summary>
+	/// <param name="walk_nodes"></param>
+	void inorderTraversal_Helper(std::vector<Nod<TVN>*>& walk_nodes) {
+		// explore left
+		Nod<TVN>* left = this->c_stanga_;
+		if (left != nullptr) {
+			left->inorderTraversal_Helper(walk_nodes);
+		}
+
+		// parent
+		walk_nodes.push_back(this);
+
+		// explore right
+		Nod<TVN>* right = this->c_dreapta_;
+		if (right != nullptr) {
+			right->inorderTraversal_Helper(walk_nodes);
+		}
+	}
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <returns></returns>
+	std::vector<Nod<TVN>>* inorderTraversal() {
+		std::vector<Nod<TVN>*> walk_nodes;
+		this->inorderTraversal_Helper(walk_nodes);
+		return walk_nodes;
+	}
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <returns></returns>
+	std::vector<TVN> inorderTraversalValues() {
+		std::vector<TVN> values;
+		std::vector<Nod<TVN>*> walk_nodes;
+		this->inorderTraversal_Helper(walk_nodes);
+		for (Nod<TVN>* n : walk_nodes) {
+			values.push_back(n->getValoare());
+		}
+		return values;
+	}
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <returns>secventa in ordine cu repetare in functie de contor</returns>
+	std::vector<TVN> inorderTraversalValuesWithDup() {
+		std::vector<TVN> values;
+		std::vector<Nod<TVN>*> walk_nodes;
+		this->inorderTraversal_Helper(walk_nodes);
+		for (size_t i = 0; i < walk_nodes.size(); i++) {
+			for (int j = 0; j < walk_nodes[i]->getContor(); j++) {
+				values.push_back(walk_nodes[i]->getValoare());
+			}
+		}
+		return values;
 	}
 #pragma endregion
 
