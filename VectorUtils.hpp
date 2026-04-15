@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 
 /// <summary>
@@ -109,7 +110,7 @@ std::vector<int> genereazaSecventaOrdonata(int nrElem, int min, int max) {
 	// daca max - min > nrElem => vor lipsi mereu elemente din intervalul [min, max)
 	if (nrOut > nrElem) {
 		int cap = max; // exclusive end
-     for (size_t i = arr.size(); i-- > 0;) {
+		for (size_t i = arr.size(); i-- > 0;) {
 			int n = arr[i];
 			int d = cap - n;
 			if (d > 0) {
@@ -136,4 +137,40 @@ std::vector<int> genereazaSecventa(int nrElem, int min, int max) {
 		arr[i] = rand() % (max - min) + min;
 	}
 	return arr;
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <typeparam name="T"></typeparam>
+/// <param name="a"></param>
+/// <param name="b"></param>
+/// <returns>
+///  <br/> a &lt; b => -1
+///  <br/> a == b => 0
+///  <br/> a &gt; b => 1
+/// </returns>
+template <typename T>
+int comparaLexicografic(const std::vector<T>* a, const std::vector<T>* b) {
+	if (a == nullptr && b == nullptr)
+		return 0;
+	else if (a == nullptr)
+		return -1;
+	else if (b == nullptr)
+		return 1;
+
+	size_t lmin = std::min(a->size(), b->size());
+	for (size_t i = 0; i < lmin; i++) {
+		if (a[i] < b[i])
+			return -1;
+		else if (a[i] > b[i])
+			return 1;
+	}
+
+	if (a->size() < b->size())
+		return -1;
+	else if (a->size() > b->size())
+		return 1;
+	else
+		return 0;
 }

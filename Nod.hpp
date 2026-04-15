@@ -10,6 +10,7 @@
 #include <cmath>
 #include <numbers>
 #include <optional>
+#include <functional>
 
 // Note generale: 
 //  - Google C++ style for private members: name_ (with trailing underscore)
@@ -183,6 +184,49 @@ public:
 
 		return TreeWalkInfo<TVN>{ treeDepth, walkNodes };
 	}
+	/// <summary>
+	/// Walks tree in depth-first order (left to right)
+	/// </summary>
+	/// <param name="lambda">function<bool(Nod<TVN>*)> lambda: lambda receives a node and returns true if the walk should continue, false if it should stop</param>
+	/// <returns></returns>
+	TreeWalkInfo<TVN> walkDFSLambda(std::function<bool(Nod<TVN>*)> lambda) {
+		int treeDepth = 0; // adancimea maxima a arborelui
+		std::vector<std::tuple<Nod<TVN>*, int>> walkNodes; // tuple de forma (nod, adancime), 0-indexed
+
+		std::unordered_set<Nod<TVN>*> visited; // pentru a evita ciclurile (in cazul in care exista)
+		std::stack<std::tuple<Nod<TVN>*, int>> stack; // stiva pentru DFS: (nod, adancime)
+		stack.push(std::tuple<Nod<TVN>*, int>(this, 0));
+
+		while (!stack.empty()) {
+			// pop nod + depth
+			std::tuple<Nod<TVN>*, int> currentEntry = stack.top();
+			stack.pop();
+			Nod<TVN>* current = std::get<0>(currentEntry);
+			int currentDepth = std::get<1>(currentEntry);
+
+			if (visited.find(current) != visited.end())
+				continue; // nodul a fost vizitat deja
+			visited.insert(current); // vizitat
+
+			walkNodes.push_back({ current, currentDepth }); // adaugam nodul curent in rezultat
+			if (!lambda(current)) {
+				break; // stop the walk if lambda returns false
+			}
+
+			if (currentDepth > treeDepth) // update tree depth while walking
+				treeDepth = currentDepth;	// update tree depth while walking
+
+			// adaugare copii in stiva (ordine inversa pentru a procesa de la stanga la dreapta)
+			if (current->c_dreapta_ != nullptr) {
+				stack.push(std::tuple<Nod<TVN>*, int>(current->c_dreapta_, currentDepth + 1));
+			}
+			if (current->c_stanga_ != nullptr) {
+				stack.push(std::tuple<Nod<TVN>*, int>(current->c_stanga_, currentDepth + 1));
+			}
+		}
+
+		return TreeWalkInfo<TVN>{ treeDepth, walkNodes };
+	}
 
 	/// <summary>
 	/// Node must not connect to any CYCLE otherwise this method will not stop
@@ -314,7 +358,6 @@ public:
 			newChild->parinte_ = this;
 		}
 
-
 		// Unparent old child
 		oldChild->parinte_ = nullptr;
 	}
@@ -423,7 +466,7 @@ public:
 	/// Walk down the tree to the leftmost node
 	/// </summary>
 	/// <returns>will return this if no left child</returns>
-	Nod<TVN>* walkToLeftmost(int& depth) {
+	Nod<TVN>* walkToLeftmostDepth(int& depth) {
 		depth = 0;
 		Nod<TVN>* current = this;
 		while (current->c_stanga_ != nullptr) {
@@ -436,12 +479,45 @@ public:
 	/// Walk down the tree to the rightmost node
 	/// </summary>
 	/// <returns>will retun this if no right child</returns>
-	Nod<TVN>* walkToRightmost(int& depth) {
+	Nod<TVN>* walkToRightmostDepth(int& depth) {
 		Nod<TVN>* current = this;
 		depth = 0;
 		while (current->c_dreapta_ != nullptr) {
 			current = current->c_dreapta_;
 			depth++;
+		}
+		return current;
+	}
+	/// <summary>
+	/// Walk down the tree to the leftmost node
+	/// </summary>
+	/// <returns>will return this if no left child</returns>
+	Nod<TVN>* walkToLeftmost() {
+		Nod<TVN>* current = this;
+		while (current->c_stanga_ != nullptr) {
+			current = current->c_stanga_;
+		}
+		return current;
+	}
+	/// <summary>
+	/// Walk down the tree to the rightmost node
+	/// </summary>
+	/// <returns>will retun this if no right child</returns>
+	Nod<TVN>* walkToRightmost() {
+		Nod<TVN>* current = this;
+		while (current->c_dreapta_ != nullptr) {
+			current = current->c_dreapta_;
+		}
+		return current;
+	}
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <returns></returns>
+	Nod<TVN>* walkToTop() {
+		Nod<TVN>* current = this;
+		while (current->parinte_ != nullptr) {
+			current = current->parinte_;
 		}
 		return current;
 	}
@@ -503,6 +579,132 @@ public:
 		}
 		return values;
 	}
+
+	/// <summary>
+	/// Nu se uita in sus la parinte, doar in jos la copii. Daca exista cicluri, metoda va intra in loop infinit
+	/// </summary>
+	/// <returns></returns>
+	Nod<TVN>* deepCopyBST() {
+		Nod<TVN>* copy = new Nod<TVN>(this->valoare_, this->contor_, this->negru_, nullptr, nullptr, nullptr);
+		if (this->c_stanga_ != nullptr) {
+			copy->c_stanga_ = this->c_stanga_->deepCopyBST();
+			copy->c_stanga_->parinte_ = copy;
+		}
+		if (this->c_dreapta_ != nullptr) {
+			copy->c_dreapta_ = this->c_dreapta_->deepCopyBST();
+			copy->c_dreapta_->parinte_ = copy;
+		}
+		return copy;
+	}
+
+	/// <summary>
+	/// 
+	/// </summary>
+	void cutAllTies() {
+		if (this->parinte_ != nullptr) {
+			this->parinte_->replaceChild(this, nullptr);
+			this->parinte_ = nullptr;
+		}
+
+		if (this->c_stanga_ != nullptr)
+			this->replaceChild(this->c_stanga_, nullptr);
+		if (this->c_dreapta_ != nullptr)
+			this->replaceChild(this->c_dreapta_, nullptr);
+	}
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="value"></param>
+	/// <returns></returns>
+	Nod<TVN>* searchBST(TVN value) {
+		if (this->valoare_ == value) {
+			return this;
+		} else if (value < this->valoare_) {
+			if (this->c_stanga_ != nullptr) {
+				return this->c_stanga_->searchBST(value);
+			} else {
+				return nullptr;
+			}
+		} else { // value > this->valoare_
+			if (this->c_dreapta_ != nullptr) {
+				return this->c_dreapta_->searchBST(value);
+			} else {
+				return nullptr;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Replaces nodes and all links in tree. Does not respect BST properties or 
+	/// red-black tree coloring, just performs a pure swap
+	/// </summary>
+	/// <param name="n1"></param>
+	/// <param name="n2"></param>
+	static void SwapNodesInTree(Nod<TVN>* n1, Nod<TVN>* n2) {
+		// 1. Swap parents
+		Nod<TVN>* p_temp = (n1 == nullptr) ? nullptr : n1->parinte_;
+		if (n1 != nullptr) {
+			// upd parent to point to n2
+			if (n1->parinte_ != nullptr) {
+				if (n1->parinte_->c_stanga_ == n1) {
+					n1->parinte_->c_stanga_ = n2;
+				} else if (n1->parinte_->c_dreapta_ == n1) {
+					n1->parinte_->c_dreapta_ = n2;
+				}
+			}
+			// update n1's parent to point to n2's parent
+			n1->parinte_ = (n2 == nullptr) ? nullptr : n2->parinte_;
+		}
+		if (n2 != nullptr) {
+			// upd parent to point to n1
+			if (n2->parinte_ != nullptr) {
+				if (n2->parinte_->c_stanga_ == n2) {
+					n2->parinte_->c_stanga_ = n1;
+				} else if (n2->parinte_->c_dreapta_ == n2) {
+					n2->parinte_->c_dreapta_ = n1;
+				}
+			}
+
+			// update n2's parent to point to n1's parent
+			n2->parinte_ = p_temp;
+		}
+
+		// 2. Swap left children
+		Nod<TVN>* l_temp = (n1 == nullptr) ? nullptr : n1->c_stanga_;
+		if (n1 != nullptr) {
+			// upd left child to point to n2
+			if (n1->c_stanga_ != nullptr)
+				n1->c_stanga_->parinte_ = n2;
+			
+			// update n1's left child to point to n2's left child
+			n1->c_stanga_ = (n2 == nullptr) ? nullptr : n2->c_stanga_;
+		}
+		if (n2 != nullptr) {
+			// upd left child to point to n1
+			if (n2->c_stanga_ != nullptr)
+				n2->c_stanga_->parinte_ = n1;
+
+			// update n2's left child to point to n1's left child
+			n2->c_stanga_ = l_temp;
+		}
+
+		// 3. Swap right children
+		Nod<TVN>* r_temp = (n1 == nullptr) ? nullptr : n1->c_dreapta_;
+		if (n1 != nullptr) {
+			// upd right child to point to n2
+			if (n1->c_dreapta_ != nullptr)
+				n1->c_dreapta_->parinte_ = n2;
+			// update n1's right child to point to n2's right child
+			n1->c_dreapta_ = (n2 == nullptr) ? nullptr : n2->c_dreapta_;
+		}
+		if (n2 != nullptr) {
+			// upd right child to point to n1
+			if (n2->c_dreapta_ != nullptr)
+				n2->c_dreapta_->parinte_ = n1;
+			// update n2's right child to point to n1's right child
+			n2->c_dreapta_ = r_temp;
+		}
+	}
 #pragma endregion
 
 #pragma region GETTERI_SETTERI
@@ -512,20 +714,33 @@ public:
 	int getContor() const {
 		return contor_;
 	}
+
 	bool getIsNegru() const {
 		return negru_;
 	}
 	void setIsNegru(bool negru) {
 		this->negru_ = negru;
 	}
+
 	Nod<TVN>* getParinte() const {
 		return parinte_;
 	}
+	void setParinte(Nod<TVN>* parinte) {
+		this->parinte_ = parinte;
+	}
+
 	Nod<TVN>* getCStanga() const {
 		return c_stanga_;
 	}
+	void setCStanga(Nod<TVN>* c_stanga) {
+		this->c_stanga_ = c_stanga;
+	}
+
 	Nod<TVN>* getCDreapta() const {
 		return c_dreapta_;
+	}
+	void setCDreapta(Nod<TVN>* c_dreapta) {
+		this->c_dreapta_ = c_dreapta;
 	}
 
 	/// <summary>
