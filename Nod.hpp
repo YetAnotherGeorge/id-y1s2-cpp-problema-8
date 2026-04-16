@@ -92,6 +92,19 @@ public:
 	/// <param name="negru"></param>
 	/// <param name="parinte"></param>
 	Nod(TVN val, int contor, bool negru, Nod<TVN>* parinte) : Nod(val, contor, negru, parinte, nullptr, nullptr) {}
+	/// <summary>
+	/// Constructor de copiere (deep copy pentru subarbore)
+	/// </summary>
+	Nod(const Nod<TVN>& other) : valoare_(other.valoare_), contor_(other.contor_), negru_(other.negru_), parinte_(nullptr), c_stanga_(nullptr), c_dreapta_(nullptr) {
+		if (other.c_stanga_ != nullptr) {
+			c_stanga_ = new Nod<TVN>(*other.c_stanga_);
+			c_stanga_->parinte_ = this;
+		}
+		if (other.c_dreapta_ != nullptr) {
+			c_dreapta_ = new Nod<TVN>(*other.c_dreapta_);
+			c_dreapta_->parinte_ = this;
+		}
+	}
 
 	/// <summary>
 	/// Sterge recursiv tot subarborele pornind de la nodul curent
@@ -675,7 +688,7 @@ public:
 			// upd left child to point to n2
 			if (n1->c_stanga_ != nullptr)
 				n1->c_stanga_->parinte_ = n2;
-			
+
 			// update n1's left child to point to n2's left child
 			n1->c_stanga_ = (n2 == nullptr) ? nullptr : n2->c_stanga_;
 		}
@@ -713,6 +726,9 @@ public:
 	}
 	int getContor() const {
 		return contor_;
+	}
+	void setContor(int contor) {
+		this->contor_ = contor;
 	}
 
 	bool getIsNegru() const {

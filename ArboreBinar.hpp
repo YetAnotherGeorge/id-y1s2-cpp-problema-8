@@ -1,5 +1,7 @@
 #pragma once
 #include <iostream>
+#include <sstream>
+#include <algorithm>
 #include "Nod.hpp"
 #include "VectorUtils.hpp"
 
@@ -21,6 +23,17 @@ public:
 	/// </summary>
 	ArboreBinar() {
 		radacina_ = nullptr;
+	}
+
+	/// <summary>
+	/// Constructor de copiere (deep copy)
+	/// </summary>
+	ArboreBinar(const ArboreBinar<TVN>& other) {
+		if (other.radacina_ != nullptr) {
+			radacina_ = new Nod<TVN>(*other.radacina_);
+		} else {
+			radacina_ = nullptr;
+		}
 	}
 
 	/// <summary>
@@ -52,11 +65,15 @@ public:
 	/// <returns>returneaza radacina copacului, goala</returns>
 	Nod<TVN>* initRadacina(TVN val) {
 		if (this->radacina_ != nullptr) {
+#ifdef BST_DEBUG_PRINT
 			std::cout << "initRadacina: Radacina deja initializata, suprascriere" << std::endl;
+#endif
 			delete this->radacina_;
 		}
 		this->radacina_ = new Nod<TVN>(val);
+#ifdef BST_DEBUG_PRINT
 		std::cout << "initRadacina: Radacina initializata cu valoarea '" << val << "'" << std::endl;
+#endif
 		return this->radacina_;
 	}
 	/// <summary>
@@ -88,71 +105,45 @@ public:
 	/// </summary>
 	/// <param name="nod"></param>
 	void deleteBST(Nod<TVN>* nod) {
-		std::cout << "deleteBST: delete node with value: ";
-		if (nod != nullptr) {
-			std::cout << nod->getValoare() << std::endl;
-		} else {
-			std::cout << "NULL" << std::endl;
-			return;
-		}
+		if (nod == nullptr) return;
+#ifdef BST_DEBUG_PRINT
+		std::cout << "deleteBST: delete node with value: " << nod->getValoare() << std::endl;
+#endif
 
 		// Sunt 3 cazuri: 
 		// 1. nodul de sters este frunza => stergem nodul
 		// 2. nodul de sters are un singur copil => stergem nodul si legam copilul la parintele nodului sters
 		// 3. nodul de sters are 2 copii => gasim nodul cu cea mai mare valoare din subarborele stang, 
 		//    va fi folosit in locul nod-ului sters
-
-		if (nod == nullptr) return;
 		// Check nod in acest copac
 		if (nod->walkToTop() != this->radacina_) {
 			std::cerr << "DeleteBST: Nodul de sters nu apartine acestui arbore" << std::endl;
 			return;
 		}
 
+		if (nod->getContor() > 1) {
+			nod->setContor(nod->getContor() - 1);
+			return;
+		}
 
-		if (nod->getCStanga() == nullptr && nod->getCDreapta() == nullptr) { // frunza
-			if (nod == this->radacina_) {
-				this->radacina_ = nullptr;
-			} else {
-				// sterge nodul
-				nod->getParinte()->replaceChild(nod, nullptr);
-			}
-		} else if (nod->getCDreapta() == nullptr) { // doar copil stanga
-
-			// replace with left child
-			Nod<TVN>* rep = nod->getCStanga();
-
-			if (nod == this->radacina_) { // replace root with left child
-				this->radacina_ = rep;
-				rep->setParinte(nullptr);
-			} else { // replace non root with left child
-				nod->getParinte()->replaceChild(nod, rep);
-			}
-
-		} else if (nod->getCStanga() == nullptr) { // doar copil dreapta
-
-			// replace with right child
-			Nod<TVN>* rep = nod->getCDreapta();
-
-			if (nod == this->radacina_) { // replace root with right child
-				this->radacina_ = rep;
-				rep->setParinte(nullptr);
-			} else { // replace non root with right child
-				nod->getParinte()->replaceChild(nod, rep);
-			}
-
-		} else {
+		if (nod->getCStanga() != nullptr && nod->getCDreapta() != nullptr) {
 			// ambii copii sunt prezenti: find smallest value in left subtree
 			Nod<TVN>* rep = nod->getCDreapta()->walkToLeftmost(); // next after nod in inorder walk
 			this->swapNodesInTree(nod, rep);
-
-			// unlink nod from new spot
-			if (this->radacina_ == nod)
-				this->radacina_ = rep;
-
 		}
 
-		nod->cutAllTies();
+		Nod<TVN>* child = nod->getCStanga() != nullptr ? nod->getCStanga() : nod->getCDreapta();
+		if (nod->getParinte() == nullptr) {
+			this->radacina_ = child;
+			if (child != nullptr)
+				child->setParinte(nullptr);
+		} else {
+			nod->getParinte()->replaceChild(nod, child);
+		}
+
+		nod->setParinte(nullptr);
+		nod->setCStanga(nullptr);
+		nod->setCDreapta(nullptr);
 		delete nod;
 	}
 	/// <summary>
@@ -286,6 +277,31 @@ public:
 		}
 	}
 	/// <summary>
+	/// Citeste o linie de la tastatura cu valori separate prin spatiu sau virgula.
+	/// Daca linia incepe cu /INSERT_RED_BLACK, foloseste inserare red-black in loc de BST simplu.
+	/// </summary>
+	void citireConsola() {
+		std::cout << "Introduceti valorile pentru inserare, separate prin spatiu sau virgula. Pentru inserare red-black, prefixati cu /INSERT_RED_BLACK\n";
+		
+		std::string line;
+		std::getline(std::cin, line);
+		bool use_rb = false;
+		const std::string prefix = "/INSERT_RED_BLACK";
+		if (line.rfind(prefix, 0) == 0) {
+			use_rb = true;
+			line = line.substr(prefix.size());
+		}
+		std::replace(line.begin(), line.end(), ',', ' ');
+		std::istringstream ss(line);
+		TVN val;
+		while (ss >> val) {
+			if (use_rb) insertRedBlackBST(val);
+			else insertBST(val);
+		}
+
+		this->AfiseazaRecursiv();
+	}
+	/// <summary>
 	/// Returneaza secventa in-ordine cu repetare conform contorului fiecarui nod
 	/// </summary>
 	std::vector<TVN> inorderValueSequence() const {
@@ -299,6 +315,7 @@ public:
 	/// <param name="a"></param>
 	/// <param name="b"></param>
 	void swapNodesInTree(Nod<TVN>* a, Nod<TVN>* b) {
+#ifdef BST_DEBUG_PRINT
 		std::cout << "Swap nodes in tree: ";
 		if (a != nullptr) std::cout << a->getValoare();
 		else std::cout << "NULL";
@@ -306,6 +323,7 @@ public:
 		if (b != nullptr) std::cout << b->getValoare();
 		else std::cout << "NULL";
 		std::cout << std::endl;
+#endif
 
 		if ((a != nullptr && a->walkToTop() != this->radacina_) || (b != nullptr && b->walkToTop() != this->radacina_)) {
 			std::cerr << "swapNodesInTree: One or both nodes do not belong to this tree" << std::endl;
@@ -348,7 +366,7 @@ public:
 			radacina_ = nullptr;
 		}
 		if (other.radacina_ != nullptr) {
-			radacina_ = other.radacina_->deepCopyBST();
+			radacina_ = new Nod<TVN>(*other.radacina_);
 		}
 		return *this;
 	}
@@ -370,6 +388,41 @@ public:
 	}
 	bool operator>=(const ArboreBinar<TVN>& other) const {
 		return comparaLexicografic(this->inorderValueSequence(), other.inorderValueSequence()) >= 0;
+	}
+	ArboreBinar<TVN> operator+(const TVN& val) const {
+		ArboreBinar<TVN> result(*this);
+		result.insertBST(val);
+		return result;
+	}
+	ArboreBinar<TVN> operator+(const ArboreBinar<TVN>& other) const {
+		ArboreBinar<TVN> result(*this);
+		for (const TVN& val : other.inorderValueSequence()) {
+			result.insertBST(val);
+		}
+		return result;
+	}
+	ArboreBinar<TVN> operator-(const TVN& val) const {
+		ArboreBinar<TVN> result(*this);
+		Nod<TVN>* nod = result.searchBST(val);
+		if (nod != nullptr) {
+			result.deleteBST(nod);
+		}
+		return result;
+	}
+	ArboreBinar<TVN> operator-(const ArboreBinar<TVN>& other) const {
+		ArboreBinar<TVN> result(*this);
+		for (const TVN& val : other.inorderValueSequence()) {
+			Nod<TVN>* nod = result.searchBST(val);
+			if (nod != nullptr) {
+				result.deleteBST(nod);
+			}
+		}
+		return result;
+	}
+	friend ArboreBinar<TVN> operator+(const TVN& val, const ArboreBinar<TVN>& tree) {
+		ArboreBinar<TVN> result(tree);
+		result.insertBST(val);
+		return result;
 	}
 #pragma endregion
 };

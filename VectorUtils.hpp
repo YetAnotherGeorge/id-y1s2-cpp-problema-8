@@ -151,15 +151,8 @@ std::vector<int> genereazaSecventa(int nrElem, int min, int max) {
 ///  <br/> a &gt; b => 1
 /// </returns>
 template <typename T>
-int comparaLexicografic(const std::vector<T>* a, const std::vector<T>* b) {
-	if (a == nullptr && b == nullptr)
-		return 0;
-	else if (a == nullptr)
-		return -1;
-	else if (b == nullptr)
-		return 1;
-
-	size_t lmin = std::min(a->size(), b->size());
+int comparaLexicografic(const std::vector<T>& a, const std::vector<T>& b) {
+	size_t lmin = std::min(a.size(), b.size());
 	for (size_t i = 0; i < lmin; i++) {
 		if (a[i] < b[i])
 			return -1;
@@ -167,9 +160,9 @@ int comparaLexicografic(const std::vector<T>* a, const std::vector<T>* b) {
 			return 1;
 	}
 
-	if (a->size() < b->size())
+	if (a.size() < b.size())
 		return -1;
-	else if (a->size() > b->size())
+	else if (a.size() > b.size())
 		return 1;
 	else
 		return 0;
