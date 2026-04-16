@@ -24,7 +24,6 @@ public:
 	ArboreBinar() {
 		radacina_ = nullptr;
 	}
-
 	/// <summary>
 	/// Constructor de copiere (deep copy)
 	/// </summary>
@@ -35,7 +34,21 @@ public:
 			radacina_ = nullptr;
 		}
 	}
-
+	/// <summary>
+	/// Creaza arbore binar cu o singura valoare
+	/// </summary>
+	/// <param name="val"></param>
+	ArboreBinar(TVN val) {
+		radacina_ = new Nod<TVN>(val, 1, true, nullptr, nullptr, nullptr);
+	}
+	/// <summary>
+	/// Insereaza valorile folosind BST
+	/// </summary>
+	/// <param name="values"></param>
+	ArboreBinar(const std::vector<TVN>& values) {
+		radacina_ = nullptr;
+		insertValuesBST(values);
+	}
 	/// <summary>
 	/// Destructor
 	/// </summary>
@@ -354,7 +367,6 @@ public:
 	}
 
 #pragma region OPERATORS
-
 	/// <summary>
 	/// Operator de atribuire (deep copy).
 	/// Sterge arborele curent si copiaza adanc arborele sursa.
