@@ -1,5 +1,7 @@
 #pragma once
 #include <iostream>
+#include <sstream>
+#include <algorithm>
 #include <string>
 #include <tuple>
 #include <unordered_set>
@@ -1109,6 +1111,25 @@ public:
 		pr_char_matrix(pr_lines, pr_colors);
 		std::cout << std::string(pad_h, '<') << std::string(5, '<') << std::string(pad_h, '<') << "\n";
 	}
-
 #pragma endregion
+
+	/// <summary>
+	/// Citeste un arbore binar din consola
+	/// </summary>
+	static Nod<TVN>* CreateFromConsole() {
+		std::string line;
+		std::getline(std::cin, line);
+		std::replace(line.begin(), line.end(), ',', ' ');
+		std::istringstream ss(line);
+		TVN val;
+		Nod<TVN>* root = nullptr;
+		while (ss >> val) {
+			if (root == nullptr) {
+				root = new Nod<TVN>(val, 1, true, nullptr, nullptr, nullptr);
+			} else {
+				root->insertValueBST(val);
+			}
+		}
+		return root;
+	}
 };
